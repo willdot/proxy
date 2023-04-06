@@ -76,7 +76,7 @@ func (f *forwardConnection) process() {
 	b := make([]byte, 512)
 	for {
 		n, readErr := f.sourceConn.Read(b)
-		if readErr != nil && err != io.EOF {
+		if readErr != nil && readErr != io.EOF {
 			fmt.Printf("failed to read from source conn: %v\n", readErr)
 			break
 		}
