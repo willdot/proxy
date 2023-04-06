@@ -81,6 +81,7 @@ func (f *forwardConnection) process() {
 	if err != nil {
 		fmt.Sprintf("failed to dial destination address: %v\n", err)
 	}
+	defer destConn.Close()
 
 	writer := f.getWriter(destConn)
 
@@ -95,7 +96,6 @@ func (f *forwardConnection) process() {
 			break
 		}
 	}
-
 }
 
 func (f *forwardConnection) getWriter(destConn net.Conn) io.Writer {

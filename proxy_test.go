@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"bytes"
-	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -20,7 +19,7 @@ func TestDataForwarded(t *testing.T) {
 	destConn, err := net.Listen("tcp", dest_addr)
 	require.NoError(t, err)
 
-	proxy, err := NewProxyServer(fmt.Sprintf("localhost%s", source_addr), fmt.Sprintf("localhost%s", dest_addr))
+	proxy, err := NewProxyServer("localhost"+source_addr, "localhost"+dest_addr)
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
@@ -52,7 +51,7 @@ func TestDataForwarded(t *testing.T) {
 }
 
 func TestDataWrittenToAdditionalWriter(t *testing.T) {
-	proxy, err := NewProxyServer(fmt.Sprintf("localhost%s", source_addr), fmt.Sprintf("localhost%s", dest_addr))
+	proxy, err := NewProxyServer("localhost"+source_addr, "localhost"+dest_addr)
 	require.NoError(t, err)
 
 	buf := bytes.NewBuffer(nil)
@@ -68,7 +67,8 @@ func TestDataWrittenToAdditionalWriter(t *testing.T) {
 
 	_, err = send.Write([]byte("hello world"))
 	require.NoError(t, err)
-	// TODO: work out why this sleep is needed
+
+	// wait for the data to be processed (sent from proxy to destination)
 	time.Sleep(time.Second)
 	assert.Equal(t, "hello world", string(buf.Bytes()))
 }
