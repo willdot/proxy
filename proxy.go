@@ -13,6 +13,8 @@ type ProxyServer struct {
 	sourceAddr string
 	destAddr   string
 
+	w io.Writer
+
 	listener net.Listener
 }
 
@@ -34,6 +36,10 @@ func NewProxyServer(sourceAddr, destAddr string) (*ProxyServer, error) {
 	return &proxy, nil
 }
 
+func (p *ProxyServer) AddAdditionalWriter(w io.Writer) {
+	p.w = w
+}
+
 // Close will close down any started connections
 func (p *ProxyServer) Close() error {
 	return p.listener.Close()
@@ -44,6 +50,7 @@ func (p *ProxyServer) run() error {
 		for {
 			conn, err := p.listener.Accept()
 			if err != nil {
+				// TODO: work out if there's a way to stop waiting for accept if we are closing the conns down.
 				fmt.Printf("error accepting source conn: %v\n", err)
 				return
 			}
@@ -51,6 +58,7 @@ func (p *ProxyServer) run() error {
 			forwardConn := forwardConnection{
 				sourceConn:      conn,
 				destinationAddr: p.destAddr,
+				w:               p.w,
 			}
 
 			go forwardConn.process()
@@ -63,6 +71,7 @@ func (p *ProxyServer) run() error {
 type forwardConnection struct {
 	sourceConn      net.Conn
 	destinationAddr string
+	w               io.Writer
 }
 
 func (f *forwardConnection) process() {
@@ -73,22 +82,26 @@ func (f *forwardConnection) process() {
 		fmt.Sprintf("failed to dial destination address: %v\n", err)
 	}
 
-	b := make([]byte, 512)
+	writer := f.getWriter(destConn)
+
 	for {
-		n, readErr := f.sourceConn.Read(b)
-		if readErr != nil && err != io.EOF {
-			fmt.Printf("failed to read from source conn: %v\n", readErr)
+		_, err = io.CopyN(writer, f.sourceConn, 512)
+		if err == io.EOF {
 			break
 		}
 
-		_, writeErr := destConn.Write(b[:n])
-		if writeErr != nil {
-			fmt.Printf("failed to send data to destination: %v", writeErr)
-			break
-		}
-
-		if readErr == io.EOF {
+		if err != nil {
+			fmt.Printf("error copying from source to destination: %v\n", err)
 			break
 		}
 	}
+
+}
+
+func (f *forwardConnection) getWriter(destConn net.Conn) io.Writer {
+	if f.w == nil {
+		return destConn
+	}
+
+	return io.MultiWriter(destConn, f.w)
 }
