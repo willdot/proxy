@@ -45,27 +45,23 @@ func (p *ProxyServer) Close() error {
 	return p.listener.Close()
 }
 
-func (p *ProxyServer) run() error {
-	go func() {
-		for {
-			conn, err := p.listener.Accept()
-			if err != nil {
-				// TODO: work out if there's a way to stop waiting for accept if we are closing the conns down.
-				fmt.Printf("error accepting source conn: %v\n", err)
-				return
-			}
-
-			forwardConn := forwardConnection{
-				sourceConn:      conn,
-				destinationAddr: p.destAddr,
-				w:               p.w,
-			}
-
-			go forwardConn.process()
+func (p *ProxyServer) run() {
+	for {
+		conn, err := p.listener.Accept()
+		if err != nil {
+			// TODO: work out if there's a way to stop waiting for accept if we are closing the conns down.
+			fmt.Printf("error accepting source conn: %v\n", err)
+			return
 		}
-	}()
 
-	return nil
+		forwardConn := forwardConnection{
+			sourceConn:      conn,
+			destinationAddr: p.destAddr,
+			w:               p.w,
+		}
+
+		go forwardConn.process()
+	}
 }
 
 type forwardConnection struct {
