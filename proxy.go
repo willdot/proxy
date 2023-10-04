@@ -18,7 +18,7 @@ type ProxyServer struct {
 	listener net.Listener
 }
 
-// NewProxyServer will create a new proxy server and start listening for data on the source address
+// NewProxyServer will create a new proxy server and start listening for data on the source address and forwarding the data to the destination address
 func NewProxyServer(sourceAddr, destAddr string) (*ProxyServer, error) {
 	proxy := ProxyServer{
 		sourceAddr: sourceAddr,
@@ -80,6 +80,7 @@ func (f *forwardConnection) process() {
 	destConn, err := net.Dial("tcp", f.destinationAddr)
 	if err != nil {
 		fmt.Sprintf("failed to dial destination address: %v\n", err)
+		return
 	}
 	defer destConn.Close()
 
